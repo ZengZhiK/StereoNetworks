@@ -15,7 +15,7 @@ from dataloader import listflowfile as lt
 from dataloader import sceneflowdataset as DS
 
 # tensorboard
-writer = SummaryWriter("./logs2")
+writer = SummaryWriter("./trainlogs2")
 # 路径设置
 datapath = '/tianhe01/Datasets/FlyingThings3D_subset'
 savemodelpath = './checkpoint2'
@@ -27,11 +27,12 @@ num_epochs = 100
 
 use_cuda = True
 
+num_workers = 4
+
 print('batch_size: {}, learning_rate: {}, num_epochs: {}, use_cuda:{}'.format(
     batch_size, learning_rate, num_epochs, use_cuda))
 
 # 数据
-num_workers = 4
 train_left_img, train_right_img, train_left_disp, test_left_img, test_right_img, test_left_disp = lt.dataloader(
     datapath)
 train_loader = DataLoader(
@@ -121,7 +122,7 @@ def test(imgL, imgR, dispL, downsampling=64, maxdisp=192):
     elif top_pad != 0 and right_pad == 0:
         predict = output[:, top_pad:, :]
     else:
-        predict = output
+        predict = output  # [B H W]
 
     if len(dispL[mask]) == 0:
         loss = torch.tensor(0)
@@ -184,12 +185,14 @@ def main():
             print('Step [{}/{}], Test Loss: {:.4f}'.format(batch_idx + 1, len(test_loader), loss))
             imgL = torchvision.utils.make_grid(imgL, nrow=4, padding=10, normalize=True)
             imgR = torchvision.utils.make_grid(imgR, nrow=4, padding=10, normalize=True)
-            predict = torchvision.utils.make_grid(predict, nrow=4, padding=10, normalize=True)
+            error = torchvision.utils.make_grid((predict.cpu() - dispL).unsqueeze(1), nrow=4, padding=10, normalize=True)
+            predict = torchvision.utils.make_grid(predict.unsqueeze(1), nrow=4, padding=10, normalize=True)
             dispL = torchvision.utils.make_grid(dispL.unsqueeze(1), nrow=4, padding=10, normalize=True)
             writer.add_image('test imgL', imgL, batch_idx + 1)
             writer.add_image('test imgR', imgR, batch_idx + 1)
             writer.add_image('test predict', predict, batch_idx + 1)
             writer.add_image('test gt', dispL, batch_idx + 1)
+            writer.add_image('test error', error, batch_idx + 1)
     print('Mean Total Test Loss: {:.4f}'.format(total_test_loss / len(test_loader)))
 
 
