@@ -15,7 +15,10 @@ from dataloader import listflowfile as lt
 from dataloader import sceneflowdataset as DS
 
 # tensorboard
-writer = SummaryWriter("./logs")
+writer = SummaryWriter("./logs2")
+# 路径设置
+datapath = '/tianhe01/Datasets/FlyingThings3D_subset'
+savemodelpath = './checkpoint2'
 
 # 超参数
 batch_size = 16
@@ -28,7 +31,6 @@ print('batch_size: {}, learning_rate: {}, num_epochs: {}, use_cuda:{}'.format(
     batch_size, learning_rate, num_epochs, use_cuda))
 
 # 数据
-datapath = '/tianhe01/Datasets/FlyingThings3D_subset'
 num_workers = 4
 train_left_img, train_right_img, train_left_disp, test_left_img, test_right_img, test_left_disp = lt.dataloader(
     datapath)
@@ -72,8 +74,9 @@ def train(imgL, imgR, dispL):
     loss4 = compute_loss(pr4, dispL)
     loss5 = compute_loss(pr5, dispL)
     loss6 = compute_loss(pr6, dispL)
-    sum_loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-    loss = sum_loss / 6
+    # sum_loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+    # loss = sum_loss / 6
+    loss = loss1 + 0.7 * loss2 + 0.5 * loss3 + 0.3 * loss4 + 0.2 * loss5 + 0.1 * loss6
 
     # 每次计算梯度前，将上一次梯度置零
     optimizer.zero_grad()
@@ -147,15 +150,19 @@ def main():
             if (batch_idx + 1) % 100 == 0:
                 print('Epoch [{}/{}], Step [{}/{}], Train Loss: {:.4f}, Time: {:.2f}'.format(
                     epoch + 1, num_epochs, batch_idx + 1, len(train_loader), loss, time.time() - start_time))
+                imgL_crop = torchvision.utils.make_grid(imgL_crop, nrow=4, padding=10, normalize=True)
+                imgR_crop = torchvision.utils.make_grid(imgR_crop, nrow=4, padding=10, normalize=True)
                 pr1 = torchvision.utils.make_grid(pr1, nrow=4, padding=10, normalize=True)
                 dispL_crop = torchvision.utils.make_grid(dispL_crop.unsqueeze(1), nrow=4, padding=10, normalize=True)
+                writer.add_image('training imgL crop', imgL_crop, global_step)
+                writer.add_image('training imgR crop', imgR_crop, global_step)
                 writer.add_image('training pr1', pr1, global_step)
                 writer.add_image('training gt', dispL_crop, global_step)
         print('Epoch {}, Mean Total Training Loss: {:.4f}'.format(epoch + 1, total_train_loss / len(train_loader)))
         writer.add_scalar('training loss', total_train_loss / len(train_loader), epoch)
         writer.add_scalar('learning rate', optimizer.param_groups[0]['lr'], epoch)
         # -- save training model -- #
-        savefilename = './checkpoint/checkpoint_' + str(epoch + 1) + '.tar'
+        savefilename = savemodelpath + '/checkpoint_' + str(epoch + 1) + '.tar'
         torch.save({
             'epoch': epoch,
             'state_dict': model.state_dict(),
@@ -175,8 +182,12 @@ def main():
         total_test_loss += loss
         if (batch_idx + 1) % 100 == 0:
             print('Step [{}/{}], Test Loss: {:.4f}'.format(batch_idx + 1, len(test_loader), loss))
+            imgL = torchvision.utils.make_grid(imgL, nrow=4, padding=10, normalize=True)
+            imgR = torchvision.utils.make_grid(imgR, nrow=4, padding=10, normalize=True)
             predict = torchvision.utils.make_grid(predict, nrow=4, padding=10, normalize=True)
             dispL = torchvision.utils.make_grid(dispL.unsqueeze(1), nrow=4, padding=10, normalize=True)
+            writer.add_image('test imgL', imgL, batch_idx + 1)
+            writer.add_image('test imgR', imgR, batch_idx + 1)
             writer.add_image('test predict', predict, batch_idx + 1)
             writer.add_image('test gt', dispL, batch_idx + 1)
     print('Mean Total Test Loss: {:.4f}'.format(total_test_loss / len(test_loader)))
