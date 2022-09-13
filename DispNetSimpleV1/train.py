@@ -15,10 +15,10 @@ from dataloader import listflowfile as lt
 from dataloader import sceneflowdataset as DS
 
 # tensorboard
-writer = SummaryWriter("./trainlogs2")
+writer = SummaryWriter("./trainlogs3")
 # 路径设置
 datapath = '/tianhe01/Datasets/FlyingThings3D_subset'
-savemodelpath = './checkpoint2'
+savemodelpath = './checkpoint3'
 
 # 超参数
 batch_size = 16
@@ -75,9 +75,9 @@ def train(imgL, imgR, dispL):
     loss4 = compute_loss(pr4, dispL)
     loss5 = compute_loss(pr5, dispL)
     loss6 = compute_loss(pr6, dispL)
-    # sum_loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-    # loss = sum_loss / 6
-    loss = loss1 + 0.7 * loss2 + 0.5 * loss3 + 0.3 * loss4 + 0.2 * loss5 + 0.1 * loss6
+    sum_loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+    loss = sum_loss / 6
+    # loss = loss1 + 0.7 * loss2 + 0.5 * loss3 + 0.3 * loss4 + 0.2 * loss5 + 0.1 * loss6
 
     # 每次计算梯度前，将上一次梯度置零
     optimizer.zero_grad()
