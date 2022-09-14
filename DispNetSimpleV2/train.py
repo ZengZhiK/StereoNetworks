@@ -15,10 +15,10 @@ from dataloader import listflowfile as lt
 from dataloader import sceneflowdataset as DS
 
 # tensorboard
-writer = SummaryWriter("./trainlogs1")
+writer = SummaryWriter("./trainlogs2")
 # 路径设置
 datapath = '/tianhe01/Datasets/FlyingThings3D_subset'
-savemodelpath = './checkpoint1'
+savemodelpath = './checkpoint2'
 
 # 超参数
 batch_size = 16
