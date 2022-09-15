@@ -5,6 +5,7 @@ from PIL import Image, ImageFilter
 from . import preprocess
 from . import readpfm as rp
 import numpy as np
+from scipy import ndimage
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -72,31 +73,29 @@ class SceneFlowDataset(data.Dataset):
                 right_img = right_img.filter(ImageFilter.GaussianBlur(radius=radius))
 
             # 50%几率图像缩小
-            if np.random.randint(0, 2, 1) == 1:
-                w, h = left_img.size
-                tw, th = 832, 468
-                left_img = left_img.resize((tw, th), Image.ANTIALIAS)
-                right_img = right_img.resize((tw, th), Image.ANTIALIAS)
-                dispL = dispL / (w / tw)
-                dispL = Image.fromarray(dispL)
-                dispL = dispL.resize((tw, th), Image.NEAREST)
-                dispL = np.ascontiguousarray(dispL, dtype=np.float32)
+            # if np.random.randint(0, 2, 1) == 1:
+            #     w, h = left_img.size
+            #     tw, th = 832, 468
+            #     left_img = left_img.resize((tw, th), Image.ANTIALIAS)
+            #     right_img = right_img.resize((tw, th), Image.ANTIALIAS)
+            #     dispL = dispL * (tw / w)
+                # dispL = ndimage.zoom(dispL, ())
 
             # 随机剪裁
-            left_img = np.ascontiguousarray(left_img, dtype=np.float32)
-            right_img = np.ascontiguousarray(right_img, dtype=np.float32)
-            h, w, c = np.shape(left_img)
+            w, h = left_img.size
             tw, th = 768, 384
+
             x1 = random.randint(0, w - tw)
             y1 = random.randint(0, h - th)
-            left_img = left_img[y1:y1 + th, x1:x1 + tw, :]
-            right_img = right_img[y1:y1 + th, x1:x1 + tw, :]
+
+            left_img = left_img.crop((x1, y1, x1 + tw, y1 + th))
+            right_img = right_img.crop((x1, y1, x1 + tw, y1 + th))
+
             dispL = dispL[y1:y1 + th, x1:x1 + tw]
-            # normalize, to tensor仅做归一化处理
+
             processed = preprocess.get_transform(augment=False)
-            left_img = processed(left_img.copy())
-            right_img = processed(right_img.copy())
-            dispL = dispL.copy()
+            left_img = processed(left_img)
+            right_img = processed(right_img)
             return left_img, right_img, dispL
         else:
             processed = preprocess.get_transform(augment=False)
