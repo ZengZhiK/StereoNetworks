@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 """
 author:     tianhe
-time  :     2022-09-13 12:49
+time  :     2022-09-16 15:48
 """
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from models.dispnetsimplev3 import DispNetSimpleV3
-from dataloader import listflowfile as lt
-from dataloader import sceneflowdataset as DS
-from boxx import show
+from models.dispnetsimplev2 import DispNetSimpleV2
+from dataloader import listkitti2015 as lt
+from dataloader import kittidataset as DS
+
+# from boxx import show
 
 # 路径设置
-datapath = '/tianhe01/Datasets/FlyingThings3D_subset'
+datapath = '/tianhe01/Datasets/KITTI2015/data_scene_flow/training/'
 savemodelpath = './checkpoint1'
 
 # 超参数
@@ -24,22 +25,18 @@ use_cuda = True
 
 num_workers = 4
 
+train_left_img, train_right_img, train_left_disp, test_left_img, test_right_img, test_left_disp = lt.dataloader(
+    datapath)
+test_loader = DataLoader(
+    DS.KITTIDataset(test_left_img, test_right_img, test_left_disp, training=False),
+    batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=False)
+
 # 模型
-model = DispNetSimpleV3()
+model = DispNetSimpleV2()
 if use_cuda:
     model.cuda()
 state_dict = torch.load(savemodelpath + '/checkpoint_200.tar')
 model.load_state_dict(state_dict['state_dict'])
-
-# 数据
-train_left_img, train_right_img, train_left_disp, test_left_img, test_right_img, test_left_disp = lt.dataloader(
-    datapath)
-test_loader = DataLoader(
-    DS.SceneFlowDataset(test_left_img, test_right_img, test_left_disp, training=False),
-    batch_size=batch_size, shuffle=False, num_workers=num_workers, drop_last=False)
-show_loader = DataLoader(
-    DS.SceneFlowDataset(test_left_img, test_right_img, test_left_disp, training=False),
-    batch_size=1, shuffle=False, num_workers=num_workers, drop_last=False)
 
 
 # 损失
@@ -102,18 +99,9 @@ def main():
     for batch_idx, (imgL, imgR, dispL) in enumerate(test_loader):
         loss, predict = test(imgL, imgR, dispL)
         total_test_loss += loss
-        if (batch_idx + 1) % 100 == 0:
+        if (batch_idx + 1) % 1 == 0:
             print('Step [{}/{}], Test Loss: {:.4f}'.format(batch_idx + 1, len(test_loader), loss))
     print('Mean Total Test Loss: {:.4f}'.format(total_test_loss / len(test_loader)))
-
-    # ------------------------------------ show ------------------------------------ #
-    show_iter = iter(show_loader)
-    imgL, imgR, dispL = next(show_iter)
-    loss, predict = test(imgL, imgR, dispL)
-    predict = predict.cpu()
-    error = (predict - dispL).squeeze(0)
-    result = torch.cat([predict.squeeze(0), dispL.squeeze(0), error], dim=1)
-    show(result)
 
 
 if __name__ == '__main__':
