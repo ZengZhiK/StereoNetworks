@@ -14,16 +14,18 @@ from models import basic
 from dataloader import listflowfile as lt
 from dataloader import sceneflowdataset as DS
 
+torch.cuda.empty_cache()
+
 # tensorboard
-writer = SummaryWriter("./trainv1")
+writer = SummaryWriter("./trainv1logs")
 # 路径设置
-datapath = 'xxx'
+datapath = '/3d_recons/stereo_data/SceneFlow/'
 savemodelpath = './checkpointv1'
 
 # 超参数
-batch_size = 16
+batch_size = 2
 learning_rate = 1e-3
-num_epochs = 10
+num_epochs = 50
 
 num_workers = 4
 
@@ -129,7 +131,7 @@ def main():
         total_train_loss = 0
         for batch_idx, (imgL_crop, imgR_crop, dispL_crop) in enumerate(train_loader):
             start_time = time.time()
-            loss, pr1 = train(imgL_crop, imgR_crop, dispL_crop)
+            loss, predict = train(imgL_crop, imgR_crop, dispL_crop)
             total_train_loss += loss
             if (batch_idx + 1) % 100 == 0:
                 print('Epoch [{}/{}], Step [{}/{}], Train Loss: {:.4f}, Time: {:.2f}'.format(
@@ -137,11 +139,11 @@ def main():
             if (batch_idx + 1) == 100:
                 imgL_crop = torchvision.utils.make_grid(imgL_crop, nrow=4, padding=10, normalize=True)
                 imgR_crop = torchvision.utils.make_grid(imgR_crop, nrow=4, padding=10, normalize=True)
-                pr1 = torchvision.utils.make_grid(pr1, nrow=4, padding=10, normalize=True)
+                predict = torchvision.utils.make_grid(predict, nrow=4, padding=10, normalize=True)
                 dispL_crop = torchvision.utils.make_grid(dispL_crop.unsqueeze(1), nrow=4, padding=10, normalize=True)
                 writer.add_image('training imgL crop', imgL_crop, epoch + 1)
                 writer.add_image('training imgR crop', imgR_crop, epoch + 1)
-                writer.add_image('training pr1', pr1, epoch + 1)
+                writer.add_image('training predict', predict, epoch + 1)
                 writer.add_image('training gt', dispL_crop, epoch + 1)
         print('Epoch {}, Mean Total Training Loss: {:.4f}'.format(epoch + 1, total_train_loss / len(train_loader)))
         writer.add_scalars('loss', {'train loss': total_train_loss / len(train_loader)}, epoch)
