@@ -158,7 +158,7 @@ class PSMNet(nn.Module):
         cost3 = F.interpolate(cost3, [self.maxdisp, left.size()[2], left.size()[3]], mode='trilinear',
                               align_corners=False)
         cost3 = torch.squeeze(cost3, 1)
-        pred3 = F.softmax(cost3, dim=1)
+        pred3 = F.softmax(cost3, dim=1)  # [B D H W]
         # For your information: This formulation 'softmax(c)' learned "similarity"
         # while 'softmax(-c)' learned 'matching cost' as mentioned in the paper.
         # However, 'c' or '-c' do not affect the performance because feature-based cost volume provided flexibility.
